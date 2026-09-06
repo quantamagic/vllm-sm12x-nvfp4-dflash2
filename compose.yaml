@@ -157,6 +157,7 @@ services:
       SIDECAR_MODEL: ${MODEL_ID}
       SIDECAR_MODEL_REVISION: ${MODEL_REVISION}
       SIDECAR_UPSTREAM: http://server:8000
+      SIDECAR_DEBUG: ${SIDECAR_DEBUG:-}
       # INT8 dynamic quantization of the ViT tower's Linear layers (default on;
       # set SIDECAR_INT8=0 for the fp32 eager fallback). ~1.5x faster encode.
       SIDECAR_INT8: ${SIDECAR_INT8:-1}
