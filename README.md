@@ -46,7 +46,7 @@ Allow roughly 30 GB of downloads for the ~9 GB runtime image, the 20.6 GB
 target checkpoint, and the 1.3 GB draft model.
 
 ```bash
-git clone https://github.com/seanyourhighness/vllm-sm12x-nvfp4-dflash2.git
+git clone https://github.com/quantamagic/vllm-sm12x-nvfp4-dflash2.git
 cd vllm-sm12x-nvfp4-dflash2 && ./start.sh
 ```
 

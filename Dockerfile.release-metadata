@@ -8,8 +8,8 @@
 # image id sha256:06f0c21d05bba880fa3133d5f191aa7e12210c2b8012f201314a0b7350e07c1c).
 FROM ghcr.io/seanyourhighness/vllm-sm12x-nvfp4-dflash2@sha256:06f0c21d05bba880fa3133d5f191aa7e12210c2b8012f201314a0b7350e07c1c
 
-LABEL org.opencontainers.image.source="https://github.com/seanyourhighness/vllm-sm12x-nvfp4-dflash2"
-LABEL org.opencontainers.image.url="https://github.com/seanyourhighness/vllm-sm12x-nvfp4-dflash2/releases"
+LABEL org.opencontainers.image.source="https://github.com/quantamagic/vllm-sm12x-nvfp4-dflash2"
+LABEL org.opencontainers.image.url="https://github.com/quantamagic/vllm-sm12x-nvfp4-dflash2/releases"
 LABEL org.opencontainers.image.version="v0.27.1-sm12x-dflash2.3"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.description="Community vLLM v0.27.1 runtime for Blackwell (SM120/SM121): ModelOpt NVFP4 target weights, all-NVFP4 DFlash2 K7 speculative decoding, NVFP4 KV cache, and optional CPU vision sidecar with fused M-RoPE decode."

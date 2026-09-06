@@ -11,7 +11,7 @@ The default target model is not included in this repository or runtime image:
 gittensor-model-hub/Qwen3.8-27B-NVFP4-RTX5090 (Apache-2.0), downloaded
 directly from Hugging Face at the revision recorded in .env.example.
 
-The DFlash2 draft model (seanyourhighness/Qwen3.8-27B-DFlash2-NVFP4) is a
+The DFlash2 draft model (quantamagic/Qwen3.8-27B-DFlash2-NVFP4) is a
 community NVFP4 requantization of z-lab/Qwen3.8-27B-DFlash2 (Apache-2.0),
 built with the release image's compressed-tensors 0.17.0.
 
