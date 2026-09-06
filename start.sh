@@ -95,8 +95,19 @@ docker run --rm \
 
 docker compose "${files[@]}" up -d --remove-orphans
 
+# Stream the GPU server's logs live so first-boot download, CUDA warmup, and
+# engine progress are visible while we wait for health. The follower is killed
+# on exit (success, timeout, or interrupt).
+docker compose "${files[@]}" logs --no-color --no-log-prefix -f server 2>&1 &
+logs_follower=$!
+cleanup() {
+  kill "$logs_follower" 2>/dev/null || true
+}
+trap cleanup EXIT
+
 deadline=$((SECONDS + START_TIMEOUT_SECONDS))
 echo "Waiting for vLLM (first boot downloads the pinned target checkpoint, ~20.6 GB)..."
+echo "Streaming server logs below (Ctrl-C to stop waiting):"
 while (( SECONDS < deadline )); do
   if curl -fsS "http://${BIND_ADDRESS}:${VLLM_PORT}/health" >/dev/null 2>&1; then
     if [[ "$mode" == *vision* ]]; then

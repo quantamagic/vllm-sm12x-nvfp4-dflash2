@@ -52,6 +52,16 @@ torch.set_num_interop_threads(TORCH_NUM_INTEROP_THREADS)
 
 app = FastAPI()
 
+# Allow browser clients on any origin (localhost dev UIs, LAN tools, etc.).
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 class VisionEncoder:
     def __init__(self) -> None:
@@ -191,8 +201,20 @@ async def chat(req: Request) -> Response:
         upstream_resp = await client.send(upstream_req, stream=True)
 
         async def gen():
-            async for line in upstream_resp.aiter_lines():
-                yield line + "\n"
+            try:
+                async for line in upstream_resp.aiter_lines():
+                    yield line + "\n"
+            except (httpx.HTTPError, asyncio.CancelledError):
+                # Upstream dropped mid-stream (network reset, idle timeout in a
+                # middle hop, or client disconnect). Emit a structured SSE
+                # error so the client sees a real failure instead of a silent
+                # truncation, then close the stream cleanly.
+                yield (
+                    'data: {"error":{"message":"upstream stream terminated '
+                    'unexpectedly (connection reset / idle timeout)","type":'
+                    '"server_error","code":"upstream_stream_reset"}}\n\n'
+                )
+                yield "data: [DONE]\n\n"
 
         return StreamingResponse(gen(), media_type="text/event-stream", status_code=upstream_resp.status_code)
     upstream_resp = await client.send(upstream_req)

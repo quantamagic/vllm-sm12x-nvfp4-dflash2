@@ -1,5 +1,40 @@
 # Changelog — vllm-sm12x-nvfp4-dflash2
 
+## v0.27.1-sm12x-dflash2.4 (2026-09-06)
+
+Host-side artifact refresh; the runtime image and both patches are unchanged.
+All changes verified against the live stack (server + vision sidecar
+healthy, canary `19×23 → 437` PASS through the pinned v22.4 template).
+
+- **Capacity retune (6 GiB / 196K).** `.env` defaults changed: KV cache pin
+  8 GiB → **6 GiB** (`6442450944`), max model len 262,144 → **196,608**,
+  max batched tokens 4,096 → **2,048**. Confirmed live on the RTX 5090:
+  234,755-token NVFP4 KV pool, 1.19× maximum concurrency at full-length
+  196K requests, draft model len overridden 262,144 → 196,608, and the
+  engine capping scheduled tokens at 2,024 to fit the K7 draft slots.
+  `.env.example` synced to match.
+- **`sidecar.py` robustness (bind-mounted, no rebuild):**
+  - Upstream stream failures (connection reset, idle timeout, client
+    disconnect) now emit a structured SSE error event
+    (`code: "upstream_stream_reset"`) followed by `[DONE]`, instead of
+    silently truncating the stream.
+  - New read-only discovery proxy: GET/HEAD/OPTIONS on unmatched paths
+    (e.g. `/v1/models`) pass through to vLLM, so model discovery works
+    through the vision port 8016.
+- **Chat template upgrade:** `qwen3.8-froggeric-v22.4` — inline thinking
+  control via `<|think_on|>/<|think_off|>` and effort markers
+  (`<|think_low|>`, `<|think_medium|>`, `<|think_xhigh|>`); new
+  `preserve_reasoning` and `auto_disable_thinking_with_tools` knobs.
+  Default remains thinking on, medium effort.
+- **`SHA256SUMS` refreshed** for the new `sidecar.py` (`f370f541…`) and
+  `chat-template.jinja` (`4dd9e48a…`); `scripts/check-release.sh` passes
+  again.
+- **Note:** the published decode/prefill benchmark tables were measured on
+  the earlier 8 GiB / 262K profile and have not been re-measured on the
+  6 GiB / 196K profile; per-lane decode is not expected to change (KV pin
+  affects capacity, not the decode kernel path), but treat the tables as
+  `.3`-profile numbers until re-benchmarked.
+
 ## NIAH gate fix (2026-08-28)
 
 `verify.sh --full` no longer crashes with `TypeError: argument of type

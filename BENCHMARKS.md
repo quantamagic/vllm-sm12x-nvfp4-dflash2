@@ -5,6 +5,12 @@ single RTX 5090 (32 GB, SM120), model `qwen3.8-27b-nvfp4-dflash2`.
 GPU decode/prefill from `bench.sh` (3 warm + 5 measured, cache-busted).
 Vision from the CPU sidecar (8-core, INT8 default-on).
 
+> Profile note (2026-09-06): the decode/prefill tables below were measured
+> on the 8 GiB KV / 262K-context capacity profile. The release has since
+> retuned to a 6 GiB KV / 196K-context profile (`v0.27.1-sm12x-dflash2.4`);
+> per-lane decode is not expected to change, but the GPU capacity tables
+> are `.3`-profile numbers until re-benchmarked.
+
 ## TLDR — the numbers at a glance
 
 | Metric | Value | Notes |

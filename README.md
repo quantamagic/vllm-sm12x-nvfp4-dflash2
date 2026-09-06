@@ -2,7 +2,7 @@
 
 Community vLLM build for a single Blackwell GPU: ModelOpt **NVFP4 target
 weights**, **NVFP4 DFlash2 draft weights**, **NVFP4 KV cache**, and **DFlash2
-K=7 block-diffusion speculative decoding** — 262K context, four concurrent
+K=7 block-diffusion speculative decoding** — 196K context, four concurrent
 streams, tool calling, and an optional bounded CPU vision sidecar that turns
 images into embeddings for the vLLM server.
 
@@ -22,9 +22,9 @@ images into embeddings for the vLLM server.
   with FULL_AND_PIECEWISE CUDA graphs `[8,16,24,32]` and an eager drafter
   that avoids integrated XQA graph interference. Measured ~61% draft
   acceptance and ~2.3x aggregate throughput vs. the legacy c3 profile.
-- **Capacity-first profile.** Explicit 8 GiB NVFP4 KV pin → 325,139-token
-  pool at 262K max context, BF16 GDN/SSM state, prefix caching, priority
-  scheduling, chunked prefill.
+- **Capacity-first profile.** Explicit 6 GiB NVFP4 KV pin → 234,755-token
+  pool at 196K max context (196,608), BF16 GDN/SSM state, prefix caching,
+  priority scheduling, chunked prefill.
 - **Fused multimodal decode.** The `.3` incremental overlay extends the
   fused QK-norm + RoPE + gate Triton kernel to Qwen3.5's three-axis M-RoPE,
   preserving the fast decode path while `--enable-mm-embeds` is active.
@@ -88,8 +88,8 @@ Subsequent starts reuse the Docker image and the named model caches.
 | Overlay | [`0001-v0271-sm12x-dflash2-nvfp4.patch`](0001-v0271-sm12x-dflash2-nvfp4.patch) (51 files, Python-only; `sha256:248adb62…`) |
 | Vision overlay | [`0002-qwen3-next-fused-mrope-vision.patch`](0002-qwen3-next-fused-mrope-vision.patch) (2 production Python files + targeted CUDA test; minimal layer recorded as 12,600 bytes) |
 | Minimal candidate image | [`Dockerfile.vision-mrope`](Dockerfile.vision-mrope) over the unchanged `.2` base |
-| Chat template | [`chat-template.jinja`](chat-template.jinja) (`sha256:398edf5b…`) |
-| Checksums | [`SHA256SUMS`](SHA256SUMS) |
+| Chat template | [`chat-template.jinja`](chat-template.jinja) (`sha256:4dd9e48a…`, `qwen3.8-froggeric-v22.4`) |
+| Checksums | [`SHA256SUMS`](SHA256SUMS) — template `4dd9e48a…`, sidecar `f370f541…` |
 
 The image and models are pinned by immutable digests/revisions, not floating
 tags. Compose passes the pinned model revision to vLLM and mounts the
@@ -113,17 +113,17 @@ not redistributed in the runtime image.
 | Knob | Value |
 |---|---|
 | Speculative config | `{"method":"dflash","model":"/models/draft","num_speculative_tokens":7,"kv_cache_dtype":"nvfp4"}` |
-| Target KV cache | NVFP4, explicit 8 GiB pin (`8589934592` bytes) → 325,139-token pool |
+| Target KV cache | NVFP4, explicit 6 GiB pin (`6442450944` bytes) → 234,755-token pool |
 | GDN/SSM state | `bfloat16` |
-| Max model len | 262,144 |
-| Max concurrent seqs | 4 (capacity-first; ~81K cached tokens/lane at full load) |
-| Max batched tokens | 4,096 |
+| Max model len | 196,608 |
+| Max concurrent seqs | 4 (capacity-first; 1.19× max concurrency at full-length 196K requests) |
+| Max batched tokens | 2,048 (engine caps scheduled tokens at 2,024 for K7 draft slots) |
 | CUDA graphs | `FULL_AND_PIECEWISE`, capture sizes `[8,16,24,32]` (K7 → 8-token verifier queries) |
 | Drafter | forced eager (`VLLM_DFLASH_FORCE_EAGER=1`) — avoids integrated XQA graph interference |
 | Target XQA | dedicated CUDA stream (`VLLM_XQA_DEDICATED_STREAM=1`) |
 | FlashInfer autotune | enabled (loaded from the persisted autotune cache at boot) |
 | Scheduling | priority + prefix caching + chunked prefill, long-prefill threshold 2048 |
-| Sampling | temperature 0.6 override, thinking enabled (medium effort) |
+| Chat template | `qwen3.8-froggeric-v22.4` — thinking on by default (medium effort); supports inline `<|think_on/off|>` / `<|think_low|>/<|think_medium|>/<|think_xhigh|>` markers, `preserve_reasoning`, and `auto_disable_thinking_with_tools` |
 | Tooling | `--enable-auto-tool-choice --tool-call-parser qwen3_coder` |
 | Serving mode | `--enable-mm-embeds` + zero image/video limits; fused M-RoPE kernel |
 | Triton JIT cache | `/home/vllm/.cache/vllm/triton` (persisted in the named vLLM cache volume) |
@@ -140,9 +140,12 @@ image (3 warm + 5 measured, cache-busted):
 
 Per-lane decode stays flat (~90–97 narrative, ~169–189 code) across c1–c4;
 aggregate scales ~3.5× from c1 → c4 with ~61% draft acceptance at K7, zero
-restarts, zero OOM. See [BENCHMARKS.md](BENCHMARKS.md) for the TLDR of
-expected 5090 decode/prefill/vision numbers and [EVIDENCE.md](EVIDENCE.md)
-for the full measurement record.
+restarts, zero OOM. These numbers were measured on the earlier 8 GiB /
+262K-capacity profile; the current 6 GiB / 196K profile has not been
+re-benchmarked (see the [changelog](CHANGELOG.md) 2026-09-06 entry). See
+[BENCHMARKS.md](BENCHMARKS.md) for the TLDR of expected 5090
+decode/prefill/vision numbers and [EVIDENCE.md](EVIDENCE.md) for the full
+measurement record.
 
 ## Why the M-RoPE overlay is required
 
